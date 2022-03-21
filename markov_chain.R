@@ -1,6 +1,6 @@
 #minta generálása
 possibleValues = c("A", "B", "C", "D")
-numberOfSamples = 1
+numberOfSamples = 2
 sampleLength = 500
 sample = matrix(ncol = numberOfSamples, nrow = sampleLength)
 
@@ -58,10 +58,11 @@ calculateAverageRank <- function(order, sample) {
     }
   }
   averageRank = averageRank / sum(frequencies)
+  
   return(averageRank)
 }
 
-calculateAverageRank(1, ts(sample, start = 1, end = 250))
+calculateAverageRank(1, sample[1:250,])
 
 calculateLoglikelihood <- function(order) {
   loglikelihood = 0
@@ -166,3 +167,22 @@ for (i in 1:length(possibleValues)^2) {
 }
 relFrequenciesTwoStep = frequenciesTwoStep / sum(frequencies)
 relFrequenciesTwoStep
+
+
+calculateEntropyRate <- function(order) {
+  transitions <- apply(sample, 2, paste0("shiftTwoStep", order))
+  transitions <- data.frame(t(matrix(transitions, nrow = 2)))
+  names(transitions) <- c("From", "To")
+  frequencies <- table(transitions)
+  transitionMatrix <- frequencies / rowSums(frequencies)
+  NormalisedEigenVector = eigen(t(transitionMatrix))$vectors[,1] / sum(eigen(t(transitionMatrix))$vectors[,1])
+  
+  A = vector(length = length(possibleValues) ^ order)
+  for (i in 1:length(possibleValues)^order) {
+    logTransitionMatrix = log(transitionMatrix)[i]
+    logTransitionMatrix[logTransitionMatrix == -Inf] = 0
+    A[i] = sum((transitionMatrix * logTransitionMatrix)[i]) * NormalisedEigenVector[i]
+  }
+  
+  return(sum(A))
+}
