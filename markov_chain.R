@@ -1,7 +1,7 @@
 #minta generálása
 possibleValues = c("A", "B", "C", "D")
 numberOfSamples = 2
-sampleLength = 500
+sampleLength = 3000
 sample = matrix(ncol = numberOfSamples, nrow = sampleLength)
 
 for (i in 1:numberOfSamples) {
@@ -44,10 +44,11 @@ calculateTransitionMatrix <- function(order, sample) {
   return(transitionMatrix)
 }
 
-calculateAverageRank <- function(order, sample) {
+calculateAverageRank <- function(order, sample, sample2) {
   averageRank = 0
   transitionMatrix = calculateTransitionMatrix(order, sample)
-  frequencies = calculateFrequencies(order, sample)
+  print(transitionMatrix)
+  frequencies = calculateFrequencies(order, sample2)
   for (k in 1:length(possibleValues)^order) {
     for (i in 1:length(possibleValues)) {
       for (j in 1:length(possibleValues)) {
@@ -62,7 +63,7 @@ calculateAverageRank <- function(order, sample) {
   return(averageRank)
 }
 
-calculateAverageRank(1, sample[1:250,])
+calculateAverageRank(1, sample[1:500,], sample[501:1000,])
 
 calculateLoglikelihood <- function(order) {
   loglikelihood = 0
@@ -176,6 +177,7 @@ calculateEntropyRate <- function(order) {
   frequencies <- table(transitions)
   transitionMatrix <- frequencies / rowSums(frequencies)
   NormalisedEigenVector = eigen(t(transitionMatrix))$vectors[,1] / sum(eigen(t(transitionMatrix))$vectors[,1])
+  # print(NormalisedEigenVector)
   
   A = vector(length = length(possibleValues) ^ order)
   for (i in 1:length(possibleValues)^order) {
@@ -184,5 +186,5 @@ calculateEntropyRate <- function(order) {
     A[i] = sum((transitionMatrix * logTransitionMatrix)[i]) * NormalisedEigenVector[i]
   }
   
-  return(sum(A))
+  return(-sum(A))
 }
