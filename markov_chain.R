@@ -1,6 +1,6 @@
 #minta generálása
 possibleValues = c("A", "B", "C", "D")
-numberOfSamples = 2
+numberOfSamples = 1
 sampleLength = 3000
 sample = matrix(ncol = numberOfSamples, nrow = sampleLength)
 
@@ -39,10 +39,14 @@ calculateFrequencies <- function(order, sample) {
 
 calculateTransitionMatrix <- function(order, sample) {
   frequencies = calculateFrequencies(order, sample)
+  print(frequencies)
   transitionMatrix = frequencies / rowSums(frequencies)
   
   return(transitionMatrix)
 }
+
+a = apply(frequencies, 1, sum)
+plot(attr(a,"names"), a, type = "h")
 
 calculateAverageRank <- function(order, sample, sample2) {
   averageRank = 0
@@ -63,17 +67,22 @@ calculateAverageRank <- function(order, sample, sample2) {
   return(averageRank)
 }
 
-calculateAverageRank(1, sample[1:500,], sample[501:1000,])
+sample1 = sample[1:1500,]
+sample2 = sample[1501:length(sample),]
+dim(sample1) = c(1500, numberOfSamples)
+dim(sample2) = c(length(sample) - 1500, numberOfSamples)
+calculateAverageRank(1, sample1, sample2)
 
-calculateLoglikelihood <- function(order) {
+calculateLoglikelihood <- function(order, sample) {
   loglikelihood = 0
   # loglikelihood = log(1 / length(possibleValues))
-  frequencies = calculateFrequencies(order)
+  frequencies = calculateFrequencies(order, sample)
   transitionMatrix = frequencies / rowSums(frequencies)
-  print(transitionMatrix)
   for (i in 1:dim(transitionMatrix)[1]) {
     for (j in 1:length(possibleValues)) {
-      loglikelihood = loglikelihood + log(transitionMatrix[i, j] ^ frequencies[i, j])
+      logTransition = log(transitionMatrix)[i, j]
+      logTransition[logTransition == -Inf] = 0
+      loglikelihood = loglikelihood + logTransition * frequencies[i, j]
     }
   }
 
@@ -82,13 +91,16 @@ calculateLoglikelihood <- function(order) {
 
 loglikelihood = vector(length = 3)
 for (i in 1:3) {
-  loglikelihood[i] = calculateLoglikelihood(i)
+  loglikelihood[i] = calculateLoglikelihood(i, sample)
 }
-plot(loglikelihood, main = "Log likelihoods", pch = 16, type = 'o', col = "blue", cex = 1.5)
+plot(loglikelihood, main = "Log likelihoods", xlab = "Rend", ylab = "Log likelihood", pch = 16, type = 'o', col = "blue", cex = 1.5)
 
-likelihoodRatioTest <- function(k, m) {
-  (T = -2 * (calculateLoglikelihood(k) - calculateLoglikelihood(m)))
+likelihoodRatioTest <- function(k, m, sample) {
+  T = -2 * (calculateLoglikelihood(k, sample) - calculateLoglikelihood(m, sample))
   degreesOfFreedom = (length(possibleValues) ^ m - length(possibleValues) ^ k)*(length(possibleValues) - 1)
+  print(T)
+  print(degreesOfFreedom)
+  print(pchisq(T, degreesOfFreedom))
   p = 1 - pchisq(T, degreesOfFreedom)
   
   return(p)
@@ -97,34 +109,34 @@ likelihoodRatioTest <- function(k, m) {
 likelihoodPValue = matrix(ncol = 2, nrow = 0)
 for (i in 1:(3 - 1)) {
   for (j in (i + 1):3) {
-    likelihoodPValue = rbind(likelihoodPValue, c(paste(i, j), likelihoodRatioTest(i, j)))
+    likelihoodPValue = rbind(likelihoodPValue, c(paste(i, j), likelihoodRatioTest(i, j, sample)))
   }
 }
 likelihoodPValue
 
 # Akaike
-calculateAkaike <- function(k, m) {
-  AIC = -2 * (calculateLoglikelihood(k) - calculateLoglikelihood(m)) - 2 * (length(possibleValues) ^ m - length(possibleValues) ^ k)*(length(possibleValues) - 1)
+calculateAkaike <- function(k, m, sample) {
+  AIC = -2 * (calculateLoglikelihood(k, sample) - calculateLoglikelihood(m, sample)) - 2 * (length(possibleValues) ^ m - length(possibleValues) ^ k)*(length(possibleValues) - 1)
   
   return(AIC)
 }
 
 AIC = vector(length = 3)
 for (i in 1:3) {
-  AIC[i] = calculateAkaike(i, 3)
+  AIC[i] = calculateAkaike(i, 3, sample)
 }
 plot(AIC, main = "AIC with test model m = 3", pch = 16, type = 'o', col = "blue")
 
 # Bayes
-calculateBayes <- function(k, m) {
-  BIC = -2 * (calculateLoglikelihood(k) - calculateLoglikelihood(m)) - 2 * (length(possibleValues) ^ m - length(possibleValues) ^ k)*(length(possibleValues) - 1) * log(sampleLength * numberOfSamples)
+calculateBayes <- function(k, m, sample) {
+  BIC = -2 * (calculateLoglikelihood(k, sample) - calculateLoglikelihood(m, sample)) - 2 * (length(possibleValues) ^ m - length(possibleValues) ^ k)*(length(possibleValues) - 1) * log(sampleLength * numberOfSamples)
   
   return(BIC)
 }
 
 BIC = vector(length = 3)
 for (i in 1:3) {
-  BIC[i] = calculateBayes(i, 3)
+  BIC[i] = calculateBayes(i, 3, sample)
 }
 plot(BIC, main = "BIC with test model m = 3", pch = 16, type = 'o', col = "blue")
 
@@ -147,6 +159,7 @@ calculateTwoStep <- function(order) {
   names(transitions) <- c("From", "To")
   frequencies <- table(transitions)
   transitionMatrix <- frequencies / rowSums(frequencies)
+  print(dim(transitionMatrix))
   
   NormalisedEigenVector = eigen(t(transitionMatrix))$vectors[,1] / sum(eigen(t(transitionMatrix))$vectors[,1])
   
@@ -176,14 +189,15 @@ calculateEntropyRate <- function(order) {
   names(transitions) <- c("From", "To")
   frequencies <- table(transitions)
   transitionMatrix <- frequencies / rowSums(frequencies)
-  NormalisedEigenVector = eigen(t(transitionMatrix))$vectors[,1] / sum(eigen(t(transitionMatrix))$vectors[,1])
+  print(transitionMatrix)
+  normalisedEigenVector = eigen(t(transitionMatrix))$vectors[,1] / sum(eigen(t(transitionMatrix))$vectors[,1])
   # print(NormalisedEigenVector)
   
   A = vector(length = length(possibleValues) ^ order)
   for (i in 1:length(possibleValues)^order) {
     logTransitionMatrix = log(transitionMatrix)[i]
     logTransitionMatrix[logTransitionMatrix == -Inf] = 0
-    A[i] = sum((transitionMatrix * logTransitionMatrix)[i]) * NormalisedEigenVector[i]
+    A[i] = sum((transitionMatrix * logTransitionMatrix)[i]) * normalisedEigenVector[i]
   }
   
   return(-sum(A))
