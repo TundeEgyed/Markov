@@ -1,7 +1,7 @@
 #minta generálása
 possibleValues = c("A", "B", "C", "D")
 numberOfSamples = 1
-sampleLength = 3000
+sampleLength = 50
 sample = matrix(ncol = numberOfSamples, nrow = sampleLength)
 
 for (i in 1:numberOfSamples) {
@@ -33,10 +33,10 @@ shift3 <- function(col) {
   return(rbind(paste0(head(col, -3), head(col[-1], -2), head(col[-1:-2], -1)), col[-1:-3]))
 }
 
-possibleValues2 = vector()
+possibleTransitions = vector()
 for (i in 1:length(possibleValues)){
   for (j in 1:length(possibleValues)){
-    possibleValues2 = c(possibleValues2, paste0(possibleValues[i], possibleValues[j]))
+    possibleTransitions = c(possibleTransitions, paste0(possibleValues[i], possibleValues[j]))
   }
 }
 
@@ -166,25 +166,6 @@ shiftTwoStep3 <- function(col) {
   return(rbind(paste0(head(col, -3), head(col[-1], -2), head(col[-1:-2], -1)), paste0(head(col[-1], -2), head(col[-1:-2], -1), col[-1:-3])))
 }
 
-calculateTwoStep <- function(order) {
-  transitions <- apply(sample, 2, paste0("shiftTwoStep", order))
-  transitions <- data.frame(t(matrix(transitions, nrow = 2)))
-  names(transitions) <- c("From", "To")
-  frequencies <- table(transitions)
-  transitionMatrix <- frequencies / rowSums(frequencies)
-  print(dim(transitionMatrix))
-  
-  NormalisedEigenVector = eigen(t(transitionMatrix))$vectors[,1] / sum(eigen(t(transitionMatrix))$vectors[,1])
-  
-  transitionMatrixSquared = transitionMatrix %*% transitionMatrix
-  A = vector(length = length(possibleValues) ^ order)
-  for (i in 1:length(possibleValues) ^ order) {
-    A[i] = sum(transitionMatrixSquared[i, seq(i %% length(possibleValues), length(possibleValues) ^ order, by = length(possibleValues))])
-    print(seq(i %% length(possibleValues), length(possibleValues) ^ order, by = length(possibleValues)))
-  }
-  return(A %*% NormalisedEigenVector)
-}
-
 calculateTransitions <- function(order){
   transitions <- apply(sample, 2, paste0("shiftTwoStep", order))
   transitions <- data.frame(t(matrix(transitions, nrow = 2)))
@@ -207,53 +188,39 @@ calculateTransitionMatrix2 <- function(order) {
   return(transitionMatrix)
 }
 
-calculateTwoStepNew <- function(order) {
+calculateTwoStep <- function(order) {
   transitionMatrix = calculateTransitionMatrix2(order)
-  NormalisedEigenVector = eigen(t(transitionMatrix))$vectors[,1] / sum(eigen(t(transitionMatrix))$vectors[,1])
+  normalisedEigenVector = eigen(t(transitionMatrix))$vectors[,1] / sum(eigen(t(transitionMatrix))$vectors[,1])
   
   transitionMatrixSquared = transitionMatrix %*% transitionMatrix
-  possibleValues2 = unique(calculateTransitions(order)[,1])
+  possibleTransitions = unique(calculateTransitions(order)[,1])
   A = vector()
-  for (i in sort(possibleValues2, decreasing = FALSE)) {
-    A[i] = sum(transitionMatrixSquared[possibleValues2[possibleValues2 == i], possibleValues2[substr(possibleValues2, 1, 1) == substr(i, 1, 1)]])
+  for (i in sort(possibleTransitions, decreasing = FALSE)) {
+    A[i] = sum(transitionMatrixSquared[possibleTransitions[possibleTransitions == i], possibleTransitions[substr(possibleTransitions, 1, 1) == substr(i, 1, 1)]])
   }
   
-  return(A %*% NormalisedEigenVector)
+  return(A %*% normalisedEigenVector)
 }
 
-transitions <- apply(sample, 2, shiftTwoStep2)
-transitions <- data.frame(t(matrix(transitions, nrow = 2)))
-names(transitions) <- c("From", "To")
-frequencies <- table(transitions)
-frequenciesTwoStep = 0
-for (i in 1:length(possibleValues)^2) {
-  frequenciesTwoStep = frequenciesTwoStep + frequencies[i, ceiling(i / length(possibleValues)) + ((i %% length(possibleValues)) + length(possibleValues) * (i %% length(possibleValues) == 0) - 1) * length(possibleValues)]
-}
-relFrequenciesTwoStep = frequenciesTwoStep / sum(frequencies)
-relFrequenciesTwoStep
-
-#relFrequenciesTwoStep
-possibleValues2 = unique(calculateTransitions(2)[,1])
-relFrequenciesTwoStep = 0
-frequencies = calculateFrequencies2(2)
-for (i in possibleValues2) {
-  relFrequenciesTwoStep = relFrequenciesTwoStep + sum((frequencies[possibleValues2[possibleValues2 == i], possibleValues2[substr(possibleValues2, 2, 2) == substr(i, 1, 1)]]))
-}
-relFrequenciesTwoStep = relFrequenciesTwoStep / sum(frequencies)
-
-# entropy
-calculateEntropyRate <- function(order) {
-  transitions <- apply(sample, 2, paste0("shiftTwoStep", order))
-  transitions <- data.frame(t(matrix(transitions, nrow = 2)))
-  names(transitions) <- c("From", "To")
-  frequencies <- table(transitions)
-  transitionMatrix <- frequencies / rowSums(frequencies)
-  print(transitionMatrix)
-  normalisedEigenVector = eigen(t(transitionMatrix))$vectors[,1] / sum(eigen(t(transitionMatrix))$vectors[,1])
-  # print(NormalisedEigenVector)
+#relativeFrequencies
+relativeFrequencies = (function() {
+  possibleTransitions = unique(calculateTransitions(2)[,1])
+  relativeFrequencies = 0
+  frequencies = calculateFrequencies2(2)
+  for (i in possibleTransitions) {
+    relativeFrequencies = relativeFrequencies + sum((frequencies[possibleTransitions[possibleTransitions == i], possibleTransitions[substr(possibleTransitions, 2, 2) == substr(i, 1, 1)]]))
+  }
   
-  A = vector(length = length(possibleValues) ^ order)
-  for (i in 1:length(possibleValues)^order) {
+  return(relativeFrequencies / sum(frequencies))
+})()
+
+#entropy
+calculateEntropyRate <- function(order) {
+  transitionMatrix = calculateTransitionMatrix2(order)
+  normalisedEigenVector = eigen(t(transitionMatrix))$vectors[,1] / sum(eigen(t(transitionMatrix))$vectors[,1])
+  
+  A = vector()
+  for (i in 1:dim(transitionMatrix)[1]) {
     logTransitionMatrix = log(transitionMatrix)[i]
     logTransitionMatrix[logTransitionMatrix == -Inf] = 0
     A[i] = sum((transitionMatrix * logTransitionMatrix)[i]) * normalisedEigenVector[i]
