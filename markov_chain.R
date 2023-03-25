@@ -29,10 +29,6 @@ shift3 <- function(col) {
   return(rbind(paste0(head(col, -3), head(col[-1], -2), head(col[-1:-2], -1)), col[-1:-3]))
 }
 
-shift3 <- function(col) {
-  return(rbind(paste0(head(col, -3), head(col[-1], -2), head(col[-1:-2], -1)), col[-1:-3]))
-}
-
 possibleTransitions = vector()
 for (i in 1:length(possibleValues)){
   for (j in 1:length(possibleValues)){
@@ -50,14 +46,13 @@ calculateFrequencies <- function(order, sample) {
 
 calculateTransitionMatrix <- function(order, sample) {
   frequencies = calculateFrequencies(order, sample)
-  print(frequencies)
   transitionMatrix = frequencies / rowSums(frequencies)
   
   return(transitionMatrix)
 }
 
 a = apply(frequencies, 1, sum)
-plot(attr(a,"names"), a, type = "h")
+plot(attr(a, "names"), a, type = "h")
 
 calculateLoglikelihood <- function(order, sample) {
   loglikelihood = 0
@@ -115,7 +110,7 @@ plot(AIC, main = "AIC with test model m = 3", pch = 16, type = 'o', col = "blue"
 
 # Bayes
 calculateBayes <- function(k, m, sample) {
-  BIC = -2 * (calculateLoglikelihood(k, sample) - calculateLoglikelihood(m, sample)) - 2 * (length(possibleValues) ^ m - length(possibleValues) ^ k)*(length(possibleValues) - 1) * log(sampleLength * numberOfSamples)
+  BIC = - 2 * (calculateLoglikelihood(k, sample) - calculateLoglikelihood(m, sample)) - 2 * (length(possibleValues) ^ m - length(possibleValues) ^ k)*(length(possibleValues) - 1) * log(sampleLength * numberOfSamples)
   
   return(BIC)
 }
@@ -127,31 +122,44 @@ for (i in 1:3) {
 plot(BIC, main = "BIC with test model m = 3", pch = 16, type = 'o', col = "blue")
 
 # cross validation
-calculateAverageRank <- function(order, sample, sample2) {
-  averageRank = 0
-  transitionMatrix = calculateTransitionMatrix(order, sample)
-  print(transitionMatrix)
-  frequencies = calculateFrequencies(order, sample2)
-  for (k in 1:length(possibleValues)^order) {
-    for (i in 1:length(possibleValues)) {
-      for (j in 1:length(possibleValues)) {
-        if (transitionMatrix[k, i] == sort(transitionMatrix[k,], decreasing = TRUE)[j]) {
-          averageRank = averageRank + frequencies[k, i] * j
+calculateTransitions <- function(order, sample) {
+  transitions <- apply(sample, 2, paste0("shift", order))
+  transitions <- data.frame(t(matrix(transitions, nrow = 2)))
+  
+  return(transitions)
+}
+
+calculateAverageRank <- function(order, trainingSet, validationSet) {
+  possibleTransitionsTraning = sort(unique(calculateTransitions(order, trainingSet)[,1]))
+  possibleTransitionsValid = sort(unique(calculateTransitions(order, validationSet)[,1]))
+  rankMatrix = matrix(nrow = length(possibleTransitionsValid), ncol = length(possibleValues))
+  transitionMatrix = calculateTransitionMatrix(order, trainingSet)
+  for (i in 1:length(possibleTransitionsValid)) {
+    for (j in 1:length(possibleTransitionsTraning)) {
+      if (possibleTransitionsValid[i] == possibleTransitionsTraning[j]) {
+        for (k in 1:length(possibleValues)) {
+          for (l in 1:length(possibleValues))
+            if (transitionMatrix[j, k] == sort(transitionMatrix[j,], decreasing = TRUE)[l]) {
+              rankMatrix[i, k] = length(possibleValues) - l + 1
+              break
+            }
         }
       }
     }
   }
-  averageRank = averageRank / sum(frequencies)
+  rankMatrix[is.na(rankMatrix)] = length(possibleValues)
+  frequencies = calculateFrequencies(order, validationSet)
+  averageRank = sum(rankMatrix * frequencies) / sum(frequencies)
   
   return(averageRank)
 }
 
-sample1Length = 50
-sample1 = sample[1:sample1Length,]
-sample2 = sample[(sample1Length + 1):length(sample),]
-dim(sample1) = c(sample1Length, numberOfSamples)
-dim(sample2) = c(length(sample) - sample1Length, numberOfSamples)
-calculateAverageRank(2, sample1, sample2)
+trainingSetLength = 50
+trainigSet = sample[1:trainingSetLength,]
+validationSet = sample[(trainingSetLength + 1):length(sample),]
+dim(trainigSet) = c(trainingSetLength, numberOfSamples)
+dim(validationSet) = c(length(sample) - trainingSetLength, numberOfSamples)
+calculateAverageRank(2, trainigSet, validationSet)
 
 #két-lépéses visszatérés
 shiftTwoStep1 <- function(col) {
@@ -166,7 +174,7 @@ shiftTwoStep3 <- function(col) {
   return(rbind(paste0(head(col, -3), head(col[-1], -2), head(col[-1:-2], -1)), paste0(head(col[-1], -2), head(col[-1:-2], -1), col[-1:-3])))
 }
 
-calculateTransitions <- function(order){
+calculateTransitions2 <- function(order){
   transitions <- apply(sample, 2, paste0("shiftTwoStep", order))
   transitions <- data.frame(t(matrix(transitions, nrow = 2)))
   
@@ -174,7 +182,7 @@ calculateTransitions <- function(order){
 }
 
 calculateFrequencies2 <- function(order){
-  transitions <- calculateTransitions(order)
+  transitions <- calculateTransitions2(order)
   names(transitions) <- c("From", "To")
   frequencies <- table(transitions)
   
@@ -193,18 +201,18 @@ calculateTwoStep <- function(order) {
   normalisedEigenVector = eigen(t(transitionMatrix))$vectors[,1] / sum(eigen(t(transitionMatrix))$vectors[,1])
   
   transitionMatrixSquared = transitionMatrix %*% transitionMatrix
-  possibleTransitions = unique(calculateTransitions(order)[,1])
-  A = vector()
+  possibleTransitions = unique(calculateTransitions2(order)[,1])
+  twoStepProbability = vector()
   for (i in sort(possibleTransitions, decreasing = FALSE)) {
-    A[i] = sum(transitionMatrixSquared[possibleTransitions[possibleTransitions == i], possibleTransitions[substr(possibleTransitions, 1, 1) == substr(i, 1, 1)]])
+    twoStepProbability[i] = sum(transitionMatrixSquared[possibleTransitions[possibleTransitions == i], possibleTransitions[substr(possibleTransitions, 1, 1) == substr(i, 1, 1)]])
   }
   
-  return(A %*% normalisedEigenVector)
+  return(twoStepProbability %*% normalisedEigenVector)
 }
 
 #relativeFrequencies
 relativeFrequencies = (function() {
-  possibleTransitions = unique(calculateTransitions(2)[,1])
+  possibleTransitions = unique(calculateTransitions2(2)[,1])
   relativeFrequencies = 0
   frequencies = calculateFrequencies2(2)
   for (i in possibleTransitions) {
