@@ -17,30 +17,22 @@ for (i in 1:numberOfSamples) {
 }
 
 #maximum likelihood módszer
-shift1 <- function(col) {
-  return(rbind(head(col, -1), col[0:-1]))
-}
-
-shift2 <- function(col) {
-  return(rbind(paste0(head(col, -2), head(col[-1], -1)), col[-1:-2]))
-}
-
-shift3 <- function(col) {
-  return(rbind(paste0(head(col, -3), head(col[-1], -2), head(col[-1:-2], -1)), col[-1:-3]))
-}
-
-possibleTransitions = vector()
-for (i in 1:length(possibleValues)){
-  for (j in 1:length(possibleValues)){
-    possibleTransitions = c(possibleTransitions, paste0(possibleValues[i], possibleValues[j]))
+shift <- function(order, sample) {
+  a = t(head(sample, -order))
+  if (order != 1) {
+    for (i in 1:(order - 1)) {
+      a = paste0(a, head(sample[-1:-i], -(order - i)))
+    }
   }
+  
+  return(rbind(a, sample[0:-order]))
 }
 
 calculateFrequencies <- function(order, sample) {
-  frequencies <- apply(sample, 2, paste0("shift", order))
+  frequencies = shift(order, sample)
   frequencies <- data.frame(t(matrix(frequencies, nrow = 2)))
   names(frequencies) <- c("From", "To")
-
+  
   return(table(frequencies))
 }
 
