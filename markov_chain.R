@@ -28,9 +28,15 @@ shift <- function(order, sample) {
   return(rbind(a, sample[0:-order]))
 }
 
+calculateTransitions <- function(order, sample) {
+  transitions = shift(order, sample)
+  transitions = data.frame(t(matrix(transitions, nrow = 2)))
+  
+  return(transitions)
+}
+
 calculateFrequencies <- function(order, sample) {
-  frequencies = shift(order, sample)
-  frequencies <- data.frame(t(matrix(frequencies, nrow = 2)))
+  frequencies = calculateTransitions(order, sample)
   names(frequencies) <- c("From", "To")
   
   return(table(frequencies))
@@ -42,9 +48,6 @@ calculateTransitionMatrix <- function(order, sample) {
   
   return(transitionMatrix)
 }
-
-a = apply(frequencies, 1, sum)
-plot(attr(a, "names"), a, type = "h")
 
 calculateLoglikelihood <- function(order, sample) {
   loglikelihood = 0
@@ -62,8 +65,8 @@ calculateLoglikelihood <- function(order, sample) {
   return(loglikelihood)
 }
 
-loglikelihood = vector(length = 3)
-for (i in 1:3) {
+loglikelihood = vector(length = 5)
+for (i in 1:5) {
   loglikelihood[i] = calculateLoglikelihood(i, sample)
 }
 plot(loglikelihood, main = "Log likelihoods", xlab = "Rend", ylab = "Log likelihood", pch = 16, type = 'o', col = "blue", cex = 1.5)
@@ -80,8 +83,8 @@ likelihoodRatioTest <- function(k, m, sample) {
 }
 
 likelihoodPValue = matrix(ncol = 2, nrow = 0)
-for (i in 1:(3 - 1)) {
-  for (j in (i + 1):3) {
+for (i in 1:(5 - 1)) {
+  for (j in (i + 1):5) {
     likelihoodPValue = rbind(likelihoodPValue, c(paste(i, j), likelihoodRatioTest(i, j, sample)))
   }
 }
@@ -94,11 +97,12 @@ calculateAkaike <- function(k, m, sample) {
   return(AIC)
 }
 
-AIC = vector(length = 3)
-for (i in 1:3) {
-  AIC[i] = calculateAkaike(i, 3, sample)
+m = 5
+AIC = vector()
+for (i in 1:m) {
+  AIC[i] = calculateAkaike(i, m, sample)
 }
-plot(AIC, main = "AIC with test model m = 3", pch = 16, type = 'o', col = "blue")
+plot(AIC, main = paste("AIC with test model m = ", m), pch = 16, type = 'o', col = "blue")
 
 # Bayes
 calculateBayes <- function(k, m, sample) {
@@ -107,20 +111,13 @@ calculateBayes <- function(k, m, sample) {
   return(BIC)
 }
 
-BIC = vector(length = 3)
-for (i in 1:3) {
-  BIC[i] = calculateBayes(i, 3, sample)
+BIC = vector()
+for (i in 1:m) {
+  BIC[i] = calculateBayes(i, m, sample)
 }
-plot(BIC, main = "BIC with test model m = 3", pch = 16, type = 'o', col = "blue")
+plot(BIC, main = paste("BIC with test model m = ", m), pch = 16, type = 'o', col = "blue")
 
 # cross validation
-calculateTransitions <- function(order, sample) {
-  transitions <- apply(sample, 2, paste0("shift", order))
-  transitions <- data.frame(t(matrix(transitions, nrow = 2)))
-  
-  return(transitions)
-}
-
 calculateAverageRank <- function(order, trainingSet, validationSet) {
   possibleTransitionsTraning = sort(unique(calculateTransitions(order, trainingSet)[,1]))
   possibleTransitionsValid = sort(unique(calculateTransitions(order, validationSet)[,1]))
@@ -146,7 +143,7 @@ calculateAverageRank <- function(order, trainingSet, validationSet) {
   return(averageRank)
 }
 
-trainingSetLength = 50
+trainingSetLength = 500
 trainigSet = sample[1:trainingSetLength,]
 validationSet = sample[(trainingSetLength + 1):length(sample),]
 dim(trainigSet) = c(trainingSetLength, numberOfSamples)
@@ -154,21 +151,20 @@ dim(validationSet) = c(length(sample) - trainingSetLength, numberOfSamples)
 calculateAverageRank(2, trainigSet, validationSet)
 
 #két-lépéses visszatérés
-shiftTwoStep1 <- function(col) {
-  return(rbind(head(col, -1), col[0:-1]))
-}
-
-shiftTwoStep2 <- function(col) {
-  return(rbind(paste0(head(col, -2), head(col[-1], -1)), paste0(head(col[-1], -1), col[-1:-2])))
-}
-
-shiftTwoStep3 <- function(col) {
-  return(rbind(paste0(head(col, -3), head(col[-1], -2), head(col[-1:-2], -1)), paste0(head(col[-1], -2), head(col[-1:-2], -1), col[-1:-3])))
+shift2 <- function(order, sample) {
+  a = head(sample, -order)
+  if (order != 1) {
+    for (i in 1:(order - 1)) {
+      a = paste0(a, head(sample[-1:-i], -(order - i)))
+    }
+  }
+  
+  return(rbind(t(head(a, -1)), t(a[-1])))
 }
 
 calculateTransitions2 <- function(order){
-  transitions <- apply(sample, 2, paste0("shiftTwoStep", order))
-  transitions <- data.frame(t(matrix(transitions, nrow = 2)))
+  transitions = shift2(order, sample)
+  transitions = data.frame(t(matrix(transitions, nrow = 2)))
   
   return(transitions)
 }
