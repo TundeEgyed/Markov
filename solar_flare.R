@@ -1,45 +1,55 @@
-sample = read.csv("/home/tunde/Dokumentumok/Önálló projekt/SolarFlare_list_GOES.csv", sep = ",")$GOES.Class.2
+library(gridExtra)
+library(ggplot2)
+
+sample = read.csv("/home/tunde/Dokumentumok/Önálló projekt/SolarFlare_list_GOES.csv", sep = ",")$GOES.Class.3
 # sample = read.csv("SolarFlare_list_GOES.csv", sep = ",")$GOES.Class
 
 dim(sample) = c(length(sample), 1)
 possibleValues = unique(sample)
 numberOfSamples = 1
 sampleLength = length(sample)
+maximumOrder = 3
 
 #likelihood
-loglikelihood = vector(length = 5)
-for (i in 1:5) {
+loglikelihood = vector(length = maximumOrder)
+for (i in 1:maximumOrder) {
   loglikelihood[i] = calculateLoglikelihood(i, sample)
 }
-plot(loglikelihood, main = "Log likelihoods", xlab = "Rend", ylab = "Log likelihood", pch = 16, type = 'o', col = "blue", cex = 1.5)
+plot(loglikelihood, main = "Log likelihoods", xlab = "Order", ylab = "Log likelihood", pch = 16, type = 'o', col = "blue", cex = 1.5)
 
 likelihoodPValue = matrix(ncol = 2, nrow = 0)
-for (i in 1:(5 - 1)) {
-  for (j in (i + 1):5) {
+for (i in 1:(maximumOrder - 1)) {
+  for (j in (i + 1):maximumOrder) {
     likelihoodPValue = rbind(likelihoodPValue, c(paste(i, j), likelihoodRatioTest(i, j, sample)))
   }
 }
 
 #AIC
-m = 5
 AIC = vector()
-for (i in 1:m) {
-  AIC[i] = calculateAkaike(i, m, sample)
+for (i in 1:maximumOrder) {
+  AIC[i] = calculateAkaike(i, maximumOrder, sample)
 }
-plot(AIC, main = paste("AIC with test model m = ", m), pch = 16, type = 'o', col = "blue")
+plot(AIC, main = paste("AIC with test model m = ", maximumOrder), pch = 16, type = 'o', col = "blue")
 
 #BIC
 BIC = vector()
-for (i in 1:m) {
-  BIC[i] = calculateBayes(i, m, sample)
+for (i in 1:maximumOrder) {
+  BIC[i] = calculateBayes(i, maximumOrder, sample)
 }
-plot(BIC, main = paste("BIC with test model m = ", m), pch = 16, type = 'o', col = "blue")
+plot(BIC, main = paste("BIC with test model m = ", maximumOrder), pch = 16, type = 'o', col = "blue")
 
 #cross validation
-trainingSetLength = 5000
+trainingSetLength = 10000
 trainigSet = sample[1:trainingSetLength,]
 validationSet = sample[(trainingSetLength + 1):length(sample),]
 calculateAverageRank(1, trainigSet, validationSet)
+
+averageRank = vector()
+for (i in 1:maximumOrder) {
+  averageRank[i] = calculateAverageRank(i, trainigSet, validationSet)
+}
+plot(averageRank, main = "Cross Validation", pch = 16, type = 'o', col = "blue")
+
 
 # két lépéses visszatérés
 relativeFrequencies = (function() {
@@ -50,10 +60,22 @@ relativeFrequencies = (function() {
     relativeFrequencies = relativeFrequencies + sum((frequencies[possibleTransitions[possibleTransitions == i], possibleTransitions[substr(possibleTransitions, 2, 2) == substr(i, 1, 1)]]))
   }
   
-  return(relativeFrequencies / sum(frequencies))
+  return(Re(relativeFrequencies / sum(frequencies)))
 })()
 
-calculateTwoStep(1)
+twoStepReturn = vector()
+twoStepReturnDiff = vector()
+for (i in 1:maximumOrder) {
+  twoStepReturn[i] = calculateTwoStep(i)
+  twoStepReturnDiff[i] = abs(twoStepReturn[i] - relativeFrequencies)
+}
+plot.new()
+grid.table(cbind(1:maximumOrder, round(twoStepReturn, 2)), cols = c("Order", "Two-Step Return"))
 
 #entropy
-calculateEntropyRate(1)
+entropyRate = vector()
+for (i in 1:maximumOrder) {
+  entropyRate[i] = calculateEntropyRate(i)
+}
+plot.new()
+grid.table(cbind(1:maximumOrder, round(entropyRate, 2)), cols = c("Order", "Entropy Rate"))

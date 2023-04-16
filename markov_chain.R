@@ -195,7 +195,7 @@ calculateTwoStep <- function(order) {
     twoStepProbability[i] = sum(transitionMatrixSquared[possibleTransitions[possibleTransitions == i], possibleTransitions[substr(possibleTransitions, 1, 1) == substr(i, 1, 1)]])
   }
   
-  return(twoStepProbability %*% normalisedEigenVector)
+  return(Re(twoStepProbability %*% normalisedEigenVector))
 }
 
 #relativeFrequencies
@@ -207,7 +207,7 @@ relativeFrequencies = (function() {
     relativeFrequencies = relativeFrequencies + sum((frequencies[possibleTransitions[possibleTransitions == i], possibleTransitions[substr(possibleTransitions, 2, 2) == substr(i, 1, 1)]]))
   }
   
-  return(relativeFrequencies / sum(frequencies))
+  return(Re(relativeFrequencies / sum(frequencies)))
 })()
 
 #entropy
@@ -222,5 +222,5 @@ calculateEntropyRate <- function(order) {
     A[i] = sum((transitionMatrix * logTransitionMatrix)[i]) * normalisedEigenVector[i]
   }
   
-  return(-sum(A))
+  return(-Re(sum(A)))
 }
