@@ -3,6 +3,8 @@ library(ggplot2)
 
 sample = read.csv("/home/tunde/Dokumentumok/Önálló projekt/SolarFlare_list_GOES.csv", sep = ",")$GOES.Class.3
 # sample = read.csv("SolarFlare_list_GOES.csv", sep = ",")$GOES.Class
+df = data.frame(sample)
+ggplot(df, aes(sample)) + geom_bar(aes(y=..count.., fill=sample))  + labs(title = "Frequencies of Categories", x = "Categories", y = "Frequency") + theme(legend.position = 'none')
 
 dim(sample) = c(length(sample), 1)
 possibleValues = unique(sample)
