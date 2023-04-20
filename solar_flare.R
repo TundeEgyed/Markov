@@ -42,13 +42,12 @@ plot(BIC, main = paste("BIC with test model m = ", maximumOrder), pch = 16, type
 
 #cross validation
 trainingSetLength = 10000
-trainigSet = sample[1:trainingSetLength,]
+trainingSet = sample[1:trainingSetLength,]
 validationSet = sample[(trainingSetLength + 1):length(sample),]
-calculateAverageRank(1, trainigSet, validationSet)
 
 averageRank = vector()
 for (i in 1:maximumOrder) {
-  averageRank[i] = calculateAverageRank(i, trainigSet, validationSet)
+  averageRank[i] = calculateAverageRank(i, trainingSet, validationSet)
 }
 plot(averageRank, main = "Cross Validation", pch = 16, type = 'o', col = "blue")
 

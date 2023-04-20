@@ -71,13 +71,13 @@ calculateAverageRank <- function(order, trainingSet, validationSet) {
   possibleTransitionsTraning = sort(unique(calculateTransitions(order, trainingSet)[,1]))
   possibleTransitionsValid = sort(unique(calculateTransitions(order, validationSet)[,1]))
   rankMatrix = matrix(nrow = length(possibleTransitionsValid), ncol = length(possibleValues))
-  transitionMatrix = calculateTransitionMatrix(order, trainingSet)
+  frequenciesOfTraningSet = calculateFrequencies(order, trainingSet)
   for (i in 1:length(possibleTransitionsValid)) {
     for (j in 1:length(possibleTransitionsTraning)) {
       if (possibleTransitionsValid[i] == possibleTransitionsTraning[j]) {
         for (k in 1:length(possibleValues)) {
           for (l in 1:length(possibleValues))
-            if (transitionMatrix[j, k] == sort(transitionMatrix[j,], decreasing = TRUE)[l]) {
+            if (frequenciesOfTraningSet[j, k] == sort(frequenciesOfTraningSet[j,])[l]) {
               rankMatrix[i, k] = length(possibleValues) - l + 1
               break
             }
@@ -88,7 +88,6 @@ calculateAverageRank <- function(order, trainingSet, validationSet) {
   rankMatrix[is.na(rankMatrix)] = length(possibleValues)
   frequencies = calculateFrequencies(order, validationSet)
   averageRank = sum(rankMatrix * frequencies) / sum(frequencies)
-  
   return(averageRank)
 }
 
