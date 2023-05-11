@@ -1,23 +1,55 @@
 #LAMP
+shift <- function(mu, sample) {
+  a = t(head(sample, -mu))
+  return(rbind(a, sample[0:-mu]))
+}
+
+calculateTransitions <- function(mu, sample) {
+  transitions = shift(mu, sample)
+  transitions = data.frame(t(matrix(transitions, nrow = 2)))
+  
+  return(transitions)
+}
+
+calculateFrequencies <- function(mu, sample) {
+  frequencies = calculateTransitions(mu, sample)
+  names(frequencies) <- c("From", "To")
+  
+  return(table(frequencies))
+}
+
+calculateRealtiveFrequencies <- function(mu, sample) {
+  frequencies = calculateFrequencies(mu, sample)
+  realtiveFrequencies = frequencies / rowSums(frequencies)
+  realtiveFrequencies[realtiveFrequencies == 0] = 0.001
+  return(realtiveFrequencies)
+}
+
 order = 2
+numberOfIterations = 100
 possibleValues = sort(unique(sample))
 n = length(possibleValues)
 psi = runif(order, 0, 1)
-psi = psi / sum(psi)
-#psi = rep(1 / order, order)
+psi = psi / sum(psi) #véletlen indítás
+#psi = rep(1 / order, order) # egyenletes
 a = array(dim = c(n, n, order), dimname = list(possibleValues, possibleValues))
 for (i in 1:order) {
-  a[,,i] = matrix(runif(n * n, 0, 1), nrow = n)
-  a[,,i] = a[,,i] / rowSums(a[,,i])
+  a[,,i] = calculateRealtiveFrequencies(mu, sample)
 }
-#for (i in 1:order) {
-#  a[,,i] = matrix(rep(1 / n, n * n), nrow = n)
-#}
+for (i in 1:order) {
+  ###relativ gyak
+  #a[,,i] = calculateRealtiveFrequencies(mu, sample)
+  ###véletlen
+  #a[,,i] = matrix(runif(n * n, 0, 1), nrow = n)
+  #a[,,i] = a[,,i] / rowSums(a[,,i])
+  ###egyenletes
+  a[,,i] = matrix(rep(1 / n, n * n), nrow = n)
+}
 psi2 = vector(length = order)
 a2 = array(dim = c(n, n, order), dimname = list(possibleValues, possibleValues))
-loglikelihood = rep(0, 10)
+loglikelihood = rep(0, numberOfIterations)
 
-for (j in 1:10) {
+for (j in 1:numberOfIterations) {
   a2[1 == 1] = 0
   for (mu in 1:order) {
     psi2[mu] = 0
