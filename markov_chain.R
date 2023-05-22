@@ -60,10 +60,29 @@ likelihoodRatioTest <- function(k, m, sample) {
 }
 
 # Akaike
+calculateAkaike <- function(k, sample) {
+  AIC = -2 * calculateLoglikelihood(k, sample) + 2 * (length(possibleValues) ^ k)*(length(possibleValues) - 1)
+  
+  return(AIC)
+}
+
 calculateAkaike <- function(k, m, sample) {
   AIC = -2 * (calculateLoglikelihood(k, sample) - calculateLoglikelihood(m, sample)) - 2 * (length(possibleValues) ^ m - length(possibleValues) ^ k)*(length(possibleValues) - 1)
   
   return(AIC)
+}
+
+# Bayes
+calculateBayes <- function(k, sample) {
+  BIC = -2 * calculateLoglikelihood(k, sample) + log(n) * (length(possibleValues) ^ k)*(length(possibleValues) - 1)
+  
+  return(BIC)
+}
+
+calculateBayes <- function(k, m, sample) {
+  BIC = - 2 * (calculateLoglikelihood(k, sample) - calculateLoglikelihood(m, sample)) - 2 * (length(possibleValues) ^ m - length(possibleValues) ^ k)*(length(possibleValues) - 1) * log(sampleLength * numberOfSamples)
+  
+  return(BIC)
 }
 
 # cross validation

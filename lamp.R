@@ -30,8 +30,9 @@ possibleValues = sort(unique(sample))
 n = length(possibleValues)
 
 calculateLamp <- function(order) {
-  psi = runif(order, 0, 1)
-  #psi = psi / sum(psi) #véletlen indítás
+  #véletlen indítás
+  #psi = runif(order, 0, 1)
+  #psi = psi / sum(psi)
   psi = rep(1 / order, order) # egyenletes
   a = array(dim = c(n, n, order), dimname = list(possibleValues, possibleValues))
   for (i in 1:order) {
@@ -41,10 +42,10 @@ calculateLamp <- function(order) {
     ###relativ gyak
     #a[,,i] = calculateRealtiveFrequencies(mu, sample)
     ###véletlen
-    #a[,,i] = matrix(runif(n * n, 0, 1), nrow = n)
-    #a[,,i] = a[,,i] / rowSums(a[,,i])
+    a[,,i] = matrix(runif(n * n, 0, 1), nrow = n)
+    a[,,i] = a[,,i] / rowSums(a[,,i])
     ###egyenletes
-    a[,,i] = matrix(rep(1 / n, n * n), nrow = n)
+    #a[,,i] = matrix(rep(1 / n, n * n), nrow = n)
   }
   psi2 = vector(length = order)
   a2 = array(dim = c(n, n, order), dimname = list(possibleValues, possibleValues))
@@ -77,13 +78,27 @@ calculateLamp <- function(order) {
   }
   #a = round(a, 3)
   
-  return(loglikelihood[numberOfIterations])
+  return(psi)
 }
 
+maximumOrder = 5
+loglikelihood = vector(length = maximumOrder)
+for (i in 1:maximumOrder) {
+  loglikelihood[i] = calculateLamp(i)
+}
+plot(loglikelihood, main = "Log likelihood értékek", xlab = "Rend", ylab = "Log likelihood", pch = 16, type = 'o', col = "blue", cex = 1.5)
+
+
 calculateAkaikeLamp <- function(order) {
-  AIC = 2 * order * n * (n - 1) + n - 1 - 2 * calculateLamp(order)
+  AIC = 2 * (order * n * (n - 1) + order - 1) - 2 * calculateLamp(order)
   
   return(AIC)
 }
-calculateAkaikeLamp(1) - calculateAkaikeLamp(3)
-calculateAkaikeLamp(2) - calculateAkaikeLamp(3)
+#calculateAkaikeLamp(1) - calculateAkaikeLamp(3)
+#calculateAkaikeLamp(2) - calculateAkaikeLamp(3)
+
+calculateBayesLamp <- function(order) {
+  BIC = log(n) * (order * n * (n - 1) + order - 1) - 2 * calculateLamp(order)
+  
+  return(BIC)
+}
