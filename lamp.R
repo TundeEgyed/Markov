@@ -28,6 +28,7 @@ calculateRealtiveFrequencies <- function(mu, sample) {
 numberOfIterations = 100
 possibleValues = sort(unique(sample))
 n = length(possibleValues)
+sampleLength = length(sample)
 
 calculateLamp <- function(order) {
   #véletlen indítás
@@ -78,15 +79,16 @@ calculateLamp <- function(order) {
   }
   #a = round(a, 3)
   
-  return(psi)
+  #return(psi)
+  return(loglikelihood[numberOfIterations])
 }
 
 maximumOrder = 5
 loglikelihood = vector(length = maximumOrder)
-for (i in 1:maximumOrder) {
-  loglikelihood[i] = calculateLamp(i)
-}
-plot(loglikelihood, main = "Log likelihood értékek", xlab = "Rend", ylab = "Log likelihood", pch = 16, type = 'o', col = "blue", cex = 1.5)
+#for (i in 1:maximumOrder) {
+#  loglikelihood[i] = calculateLamp(i)
+#}
+#plot(loglikelihood, main = "Log likelihood értékek", xlab = "Rend", ylab = "Log likelihood", pch = 16, type = 'o', col = "blue", cex = 1.5)
 
 
 calculateAkaikeLamp <- function(order) {
@@ -98,7 +100,7 @@ calculateAkaikeLamp <- function(order) {
 #calculateAkaikeLamp(2) - calculateAkaikeLamp(3)
 
 calculateBayesLamp <- function(order) {
-  BIC = log(n) * (order * n * (n - 1) + order - 1) - 2 * calculateLamp(order)
+  BIC = log(sampleLength) * (order * n * (n - 1) + order - 1) - 2 * calculateLamp(order)
   
   return(BIC)
 }
